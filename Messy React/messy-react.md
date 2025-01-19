@@ -99,3 +99,64 @@ balances.filter((balance) =>
 Sử dụng điều kiện lọc rõ ràng và đơn giản hơn:
 - `balance.amount > 0`: Chỉ giữ các số dư dương.
 - `blockchainPriority[balance.blockchain] !== undefined`: Loại bỏ các `blockchain` không hợp lệ.
+
+
+# Đoạn code đầy đủ sau khi sửa lại như sau
+```
+interface WalletBalance {
+  currency: string;
+  amount: number;
+  blockchain: string;
+}
+
+interface Props extends BoxProps {}
+
+const WalletPage: React.FC<Props> = (props: Props) => {
+  const { children, ...rest } = props;
+
+  const balances = useWalletBalances();
+  const prices = usePrices();
+
+  const blockchainPriority: Record<string, number> = {
+    Osmosis: 100,
+    Ethereum: 50,
+    Arbitrum: 30,
+    Zilliqa: 20,
+    Neo: 20,
+  };
+
+  const processedBalances = useMemo(() => {
+    return balances
+      .filter(
+        (balance) =>
+          balance.amount > 0 && blockchainPriority[balance.blockchain] !== undefined
+      )
+      .map((balance) => ({
+        ...balance,
+        formatted: balance.amount.toFixed(2),
+        usdValue: (prices[balance.currency] || 0) * balance.amount,
+        priority: blockchainPriority[balance.blockchain] ?? -99,
+      }))
+      .sort((a, b) => b.priority - a.priority);
+  }, [balances, prices]);
+
+  // Render rows
+  const rows = processedBalances.map((balance) => (
+    <WalletRow
+      key={balance.currency}
+      className={classes.row}
+      amount={balance.amount}
+      usdValue={balance.usdValue}
+      formattedAmount={balance.formatted}
+    />
+  ));
+
+  return (
+    <div {...rest}>
+      {rows}
+    </div>
+  );
+};
+
+export default WalletPage;
+```
